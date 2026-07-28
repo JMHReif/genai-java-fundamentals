@@ -1,0 +1,63 @@
+= Retrieval Augmented Generation - Vector + Graph RAG (Goodreads)
+
+This repository showcases vector and graph retrieval augmented generation, highlighting the differences and design considerations of each.
+
+Also explores when vector+graph retrieval can fail and succeed based on questions asked.
+
+Everything runs locally: an https://ollama.com[Ollama^]-hosted `llama3.1:8b` chat model plus a `nomic-embed-text` embedding model, backed by a local Neo4j instance holding the Goodreads graph.
+
+== Data set
+
+Data has been sourced and curated from the UCSD Book Graph (Goodreads). You can load the same data set using the script in the https://github.com/JMHReif/graph-demo-datasets/tree/main/goodreadsUCSD[graph-demo-datasets code repository^].
+
+The graph connects `Book`, `Review`, `Author`, `Series`, `Genre`, `Work`, and `User` nodes. Vector search runs over `Review` text embeddings (the `review-text` index), and graph retrieval enriches those matches by traversing `(Review)-[:WRITTEN_FOR]->(Book)` out to authors and genres.
+
+*Note:* Unlike a typical demo data set, this one is large (millions of books and reviews), so it needs a local Neo4j instance or a sized-up cloud instance - the free tier is not sufficient.
+
+*Prerequisites:* Pull the Ollama models (`ollama pull llama3.1:8b` and `ollama pull nomic-embed-text`). The `/text2cypher` and `/debug/tools` endpoints additionally require a Neo4j MCP server, configured in `src/main/resources/mcp-servers.json`.
+
+== Demo queries
+
+[source,shell]
+----
+# LLM only
+http ":8080/llm"
+
+http ":8080/llm?question=What are some highly-rated fantasy books?"
+
+# Vector search
+http ":8080/vector?question=What are some highly-rated fantasy books?"
+
+# Relevance decay: the short list stays on-topic, the longer list drifts off-topic
+http ":8080/vectorPlus?question=Could you find star wars books?"
+
+# Vector search + graph retrieval
+http ":8080/graph?question=What are some highly-rated fantasy books?"
+
+# Why graph retrieval gives a better answer :)
+http ":8080/graph?question=Which science fiction books are popular?"
+
+# Check available tools
+http ":8080/debug/tools"
+
+# Test text2cypher
+http ":8080/text2cypher?question=How many books are in the database?"
+
+# Pure text2cypher
+http ":8080/text2cypher?question=Which 5 authors have written the most books?"
+----
+
+== Presentations
+
+* https://speakerdeck.com/jmhreif/pass-or-play-what-does-genai-mean-for-the-developer[Seattle JUG meetup (Sep 2025)^]
+* https://speakerdeck.com/jmhreif/pass-or-play-what-does-genai-mean-for-the-java-developer-2eebd8f2-c88a-425f-a34c-0bd7a0ca88e2[Houston JUG meetup (Aug 2025)^]
+* https://speakerdeck.com/jmhreif/rag-accuracy-and-explainability-in-genai-applications-251e72c6-e500-4434-b7b1-0b1231eca02d[AI Collective Chicago meetup (Aug 2025)^]
+
+== Resources
+
+* Site: https://ollama.com[Ollama^]
+* Documentation: https://docs.spring.io/spring-ai/reference/api/vectordbs/neo4j.html[Spring AI Neo4j Vector Store^]
+* Guide: https://neo4j.com/labs/genai-ecosystem/spring-ai[Spring AI Neo4j^]
+* Online training: https://graphacademy.neo4j.com/categories/llms/[GraphAcademy LLM courses^]
+* Model: https://ollama.com/library/nomic-embed-text[Ollama nomic-embed-text embeddings^]
+* Tooling: https://github.com/neo4j-contrib/mcp-neo4j[Neo4j MCP server^]
